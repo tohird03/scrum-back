@@ -6,7 +6,7 @@ import { AuthModule } from './auth/auth.module';
   imports: [
     MongooseModule.forRootAsync({
       useFactory: () => ({
-        uri: 'mongodb://localhost:27017/aefrg',
+        uri: 'mongodb://localhost:27017/scrum',
       }),
     }),
     AuthModule,

@@ -9,8 +9,8 @@ export class AuthController {
   // /sign-up POST
   @Post('sign-up')
   @UsePipes(new ValidationPipe())
-  signUp(@Body() signUpdata: SignUpDto) {
-    return 'Salom'
+  async signUp(@Body() signUpdata: SignUpDto) {
+    return this.authService.signUp(signUpdata)
   }
 
 
