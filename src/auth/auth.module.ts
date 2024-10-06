@@ -4,19 +4,26 @@ import { AuthService } from './auth.service';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './schemas/user.schema';
+import { OtpModel, OtpSchema } from './schemas/otp.schema';
 
 @Module({
   imports: [
     JwtModule.register({
       secret: '1234',
-      signOptions: {expiresIn: '1h'}
+      signOptions: { expiresIn: '1h' }
     }),
-    MongooseModule.forFeature([{
-      name: User.name,
-      schema: UserSchema,
-    }])
+    MongooseModule.forFeature([
+      {
+        name: User.name,
+        schema: UserSchema,
+      },
+      {
+        name: OtpModel.name,
+        schema: OtpSchema,
+      },
+    ])
   ],
   controllers: [AuthController],
   providers: [AuthService]
 })
-export class AuthModule {}
+export class AuthModule { }

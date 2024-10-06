@@ -1,19 +1,22 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { SignUpDto } from './dtos/auth.dto';
+import { BadRequestException, Injectable, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
+import { SendEmailForOtp, SignUpDto } from './dtos/auth.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { User, UserSchema } from './schemas/user.schema';
+import { User } from './schemas/user.schema';
 import { Model } from 'mongoose';
 import { ErrorTxt } from 'src/constants/error.txt';
-import * as bcrypt from 'bcrypt'
+import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
 import { randomInt } from 'crypto';
 import { ConfigService } from '@nestjs/config';
-
-let otpStore = [];
+import { OtpModel } from './schemas/otp.schema';
 
 @Injectable()
 export class AuthService {
-  constructor(@InjectModel(User.name) private UserModel: Model<User>, private readonly authConfig: ConfigService) {}
+  constructor(
+    @InjectModel(User.name) private UserModel: Model<User>,
+    @InjectModel(OtpModel.name) private OtpModel: Model<OtpModel>,
+    private readonly authConfig: ConfigService,
+  ) {}
 
   mailTransport() {
     const transporter = nodemailer.createTransport({
@@ -22,40 +25,57 @@ export class AuthService {
         user: this.authConfig.get<string>('MAIL_SENDER_USER'),
         pass: this.authConfig.get<string>('MAIL_SENDER_PASS'),
       },
-   });
+    });
 
-    return transporter
+    return transporter;
   }
 
-  async signUp(signUpData: SignUpDto) {
-    const {email, password} = signUpData;
+  async sendEmailForOtp(signUpData: SendEmailForOtp) {
+    const { email } = signUpData;
 
-    const findUseEmail = await this.UserModel.findOne({email})
+    const findUseEmail = await this.UserModel.findOne({ email });
 
-    if(findUseEmail) {
-      throw new BadRequestException(ErrorTxt.UserAlreadyExit)
+    if (findUseEmail) {
+      throw new BadRequestException(ErrorTxt.UserAlreadyExit);
     }
 
     const otp = randomInt(100000, 999999);
-    const transporter = this.mailTransport()
-    const options = {
+    const transporter = this.mailTransport();
+
+    const sendOtpOptions = {
+      from: this.authConfig.get<string>('MAIL_SENDER_USER'),
       to: email,
-      subject: `Your OTP code is ${otp}`
-    }
+      subject: 'Verification code',
+      text: `Your OTP code is ${otp}`,
+    };
+
+    await this.OtpModel.create({
+      email,
+      otp,
+      createdAt: new Date(),
+    });
 
     try {
-      await transporter.sendMail(options)
+      await transporter.sendMail(sendOtpOptions);
     } catch (error) {
-      throw new Error(error)
+      throw new InternalServerErrorException('Failed to send OTP');
+    }
+  }
+
+  async verifyOtp(userData: SignUpDto) {
+    const { email, otp: enteredOtp, password } = userData;
+
+    const otpRecord = await this.OtpModel.findOne({ email });
+    if (!otpRecord || otpRecord.otp !== enteredOtp) {
+      throw new UnauthorizedException('Invalid OTP');
     }
 
-    const hashPass = await bcrypt.hash(password, 10)
+    const hashPassword = await bcrypt.hash(password, 10)
 
     await this.UserModel.create({
-      ...signUpData,
-      password: hashPass
-    })
-
-    return '200'
+      ...userData,
+      password: hashPassword,
+    });
+    await this.OtpModel.deleteOne({email});
   }
 }
