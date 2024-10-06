@@ -7,20 +7,25 @@ import { ErrorTxt } from 'src/constants/error.txt';
 import * as bcrypt from 'bcrypt'
 import * as nodemailer from 'nodemailer';
 import { randomInt } from 'crypto';
-
-// const transporter = nodemailer.createTransport({
-//   service: 'gmail',
-//   auth: {
-//     user: 'tohirjondoniyorov748@gmail.com',
-//     pass: '2003tohir',
-//   },
-// });
+import { ConfigService } from '@nestjs/config';
 
 let otpStore = [];
 
 @Injectable()
 export class AuthService {
-  constructor(@InjectModel(User.name) private UserModel: Model<User>) {}
+  constructor(@InjectModel(User.name) private UserModel: Model<User>, private readonly authConfig: ConfigService) {}
+
+  mailTransport() {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: this.authConfig.get<string>('MAIL_SENDER_USER'),
+        pass: this.authConfig.get<string>('MAIL_SENDER_PASS'),
+      },
+   });
+
+    return transporter
+  }
 
   async signUp(signUpData: SignUpDto) {
     const {email, password} = signUpData;
@@ -31,13 +36,18 @@ export class AuthService {
       throw new BadRequestException(ErrorTxt.UserAlreadyExit)
     }
 
-    // const otp = randomInt(100000, 999999); // 6 xonali OTP
-    // await transporter.sendMail({
-    //   from: 'tohirjondoniyorov748@gmail.com',
-    //   to: email,
-    //   subject: 'Your OTP Code',
-    //   text: `Your OTP code is ${otp}`,
-    // });
+    const otp = randomInt(100000, 999999);
+    const transporter = this.mailTransport()
+    const options = {
+      to: email,
+      subject: `Your OTP code is ${otp}`
+    }
+
+    try {
+      await transporter.sendMail(options)
+    } catch (error) {
+      throw new Error(error)
+    }
 
     const hashPass = await bcrypt.hash(password, 10)
 
