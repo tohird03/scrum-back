@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
-import { LoginDto, SendEmailForOtp, SignUpDto } from './dtos/auth.dto';
+import { SendEmailForOtp, SignUpDto } from './dtos/auth.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from './schemas/user.schema';
 import { Model } from 'mongoose';
@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { OtpModel } from './schemas/otp.schema';
 import { JwtService } from '@nestjs/jwt';
 import { RefreshTokenModel } from './schemas/refresh-token.schema';
+import { LoginDto } from './dtos/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -22,6 +23,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  // Nodemailer config
   mailTransport() {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -34,6 +36,7 @@ export class AuthService {
     return transporter;
   }
 
+  // POST: Send otp to email
   async sendEmailForOtp(signUpData: SendEmailForOtp) {
     const { email } = signUpData;
 
@@ -66,10 +69,11 @@ export class AuthService {
     }
   }
 
+  // POST: Otp verify
   async verifyOtp(userData: SignUpDto) {
     const { email, otp: enteredOtp, password } = userData;
 
-    const otpRecord = await this.OtpModel.findOne({ email });
+    const otpRecord = await this.OtpModel.findOneAndDelete({ email });
     if (!otpRecord || otpRecord.otp !== enteredOtp) {
       throw new UnauthorizedException('Invalid OTP');
     }
@@ -80,9 +84,9 @@ export class AuthService {
       ...userData,
       password: hashPassword,
     });
-    await this.OtpModel.deleteOne({email});
   }
 
+  // POST: Login user
   async loginUser(loginData: LoginDto) {
     const {email, password} = loginData;
 
@@ -101,6 +105,18 @@ export class AuthService {
     return this.generateToken(findUser?._id)
   }
 
+   // POST: Refresh token
+   async refreshToken(token: string) {
+    const refreshToken = await this.RefreshTokenModel.findOneAndDelete({token})
+
+    if(!refreshToken) {
+      throw new UnauthorizedException(ErrorTxt.AuthInvalidRefreshToken)
+    }
+
+    return this.generateToken(refreshToken?.userId)
+  }
+
+  // Generate token, accessToken and refreshToken
   async generateToken(userId) {
     const accessToken = this.jwtService.sign({userId}, {expiresIn: '1h'})
     const refreshToken = this.jwtService.sign({userId}, {expiresIn: '3d'})
@@ -113,10 +129,11 @@ export class AuthService {
     }
   }
 
+  // Refresh token save to db
   async saveStoreRefreshToken (token: string, userId) {
     const expiryDate = new Date()
     expiryDate.setDate(expiryDate.getDate() + 3)
 
-    await this.RefreshTokenModel.create({token: userId, expiryDate})
+    await this.RefreshTokenModel.create({token, userId, expiryDate})
   }
 }

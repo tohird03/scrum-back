@@ -1,6 +1,8 @@
 import { Body, Controller, Post, UsePipes, ValidationPipe } from '@nestjs/common';
-import { LoginDto, SendEmailForOtp, SignUpDto } from './dtos/auth.dto';
+import {SendEmailForOtp, SignUpDto } from './dtos/auth.dto';
 import { AuthService } from './auth.service';
+import { RefreshTokenDto } from './dtos/refresh-token.dto';
+import { LoginDto } from './dtos/login.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -29,4 +31,9 @@ export class AuthController {
   }
 
   // /refresh-token POST
+  @Post('refresh-token')
+  @UsePipes(new ValidationPipe())
+  async refreshTokenI(@Body() refreshTokenData: RefreshTokenDto) {
+    return this.authService.refreshToken(refreshTokenData?.refreshToken)
+  }
 }
