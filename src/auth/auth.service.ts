@@ -107,7 +107,7 @@ export class AuthService {
 
    // POST: Refresh token
    async refreshToken(token: string) {
-    const refreshToken = await this.RefreshTokenModel.findOneAndDelete({token})
+    const refreshToken = await this.RefreshTokenModel.findOne({token})
 
     if(!refreshToken) {
       throw new UnauthorizedException(ErrorTxt.AuthInvalidRefreshToken)
@@ -134,6 +134,10 @@ export class AuthService {
     const expiryDate = new Date()
     expiryDate.setDate(expiryDate.getDate() + 3)
 
-    await this.RefreshTokenModel.create({token, userId, expiryDate})
+    await this.RefreshTokenModel.updateOne(
+      {userId},
+      {$set: {expiryDate, token}},
+      {upsert: true}
+    )
   }
 }
