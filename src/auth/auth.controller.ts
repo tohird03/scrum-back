@@ -1,12 +1,12 @@
 import { Body, Controller, Post, UsePipes, ValidationPipe } from '@nestjs/common';
-import { SendEmailForOtp, SignUpDto } from './dtos/auth.dto';
+import { LoginDto, SendEmailForOtp, SignUpDto } from './dtos/auth.dto';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService){}
 
-  // Send OTP POST
+  // Send OTP
   @Post('send-otp')
   @UsePipes(new ValidationPipe())
   async sendOtp(@Body() sendEmailForOtp: SendEmailForOtp) {
@@ -22,7 +22,11 @@ export class AuthController {
 
 
   // /login POST
-
+  @Post('login')
+  @UsePipes(new ValidationPipe())
+  async login(@Body() loginData: LoginDto) {
+    return this.authService.loginUser(loginData)
+  }
 
   // /refresh-token POST
 }

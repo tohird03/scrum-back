@@ -1,4 +1,5 @@
 export const ErrorTxt = {
-  UserNotFound: 'User not found',
   UserAlreadyExit: 'User already exit',
+  UserNotFound: 'User not found',
+  AuthWrongPass: "Wrong password"
 }

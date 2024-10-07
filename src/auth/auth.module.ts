@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './schemas/user.schema';
 import { OtpModel, OtpSchema } from './schemas/otp.schema';
+import { RefreshTokenModel, RefreshTokenSchema } from './schemas/refresh-token.schema';
 
 @Module({
   imports: [
@@ -20,6 +21,10 @@ import { OtpModel, OtpSchema } from './schemas/otp.schema';
       {
         name: OtpModel.name,
         schema: OtpSchema,
+      },
+      {
+        name: RefreshTokenModel.name,
+        schema: RefreshTokenSchema,
       },
     ])
   ],

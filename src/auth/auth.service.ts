@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
-import { SendEmailForOtp, SignUpDto } from './dtos/auth.dto';
+import { LoginDto, SendEmailForOtp, SignUpDto } from './dtos/auth.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from './schemas/user.schema';
 import { Model } from 'mongoose';
@@ -9,13 +9,17 @@ import * as nodemailer from 'nodemailer';
 import { randomInt } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { OtpModel } from './schemas/otp.schema';
+import { JwtService } from '@nestjs/jwt';
+import { RefreshTokenModel } from './schemas/refresh-token.schema';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User.name) private UserModel: Model<User>,
     @InjectModel(OtpModel.name) private OtpModel: Model<OtpModel>,
+    @InjectModel(RefreshTokenModel.name) private RefreshTokenModel: Model<RefreshTokenModel>,
     private readonly authConfig: ConfigService,
+    private readonly jwtService: JwtService,
   ) {}
 
   mailTransport() {
@@ -77,5 +81,42 @@ export class AuthService {
       password: hashPassword,
     });
     await this.OtpModel.deleteOne({email});
+  }
+
+  async loginUser(loginData: LoginDto) {
+    const {email, password} = loginData;
+
+    const findUser = await this.UserModel.findOne({email})
+
+    if(!findUser) {
+      throw new UnauthorizedException(ErrorTxt.UserNotFound);
+    }
+
+    const passCompare = await bcrypt.compare(password, findUser.password);
+
+    if(!passCompare) {
+      throw new UnauthorizedException(ErrorTxt.AuthWrongPass);
+    }
+
+    return this.generateToken(findUser?._id)
+  }
+
+  async generateToken(userId) {
+    const accessToken = this.jwtService.sign({userId}, {expiresIn: '1h'})
+    const refreshToken = this.jwtService.sign({userId}, {expiresIn: '3d'})
+
+    await this.saveStoreRefreshToken(refreshToken, userId);
+
+    return {
+      accessToken,
+      refreshToken
+    }
+  }
+
+  async saveStoreRefreshToken (token: string, userId) {
+    const expiryDate = new Date()
+    expiryDate.setDate(expiryDate.getDate() + 3)
+
+    await this.RefreshTokenModel.create({token: userId, expiryDate})
   }
 }
