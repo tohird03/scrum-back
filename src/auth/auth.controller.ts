@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import {SendEmailForOtp, SignUpDto } from './dtos/auth.dto';
 import { AuthService } from './auth.service';
 import { RefreshTokenDto } from './dtos/refresh-token.dto';
@@ -21,7 +21,6 @@ export class AuthController {
   async verifyOtp(@Body() verifyUser: SignUpDto) {
     return this.authService.verifyOtp(verifyUser)
   }
-
 
   // /login POST
   @Post('login')

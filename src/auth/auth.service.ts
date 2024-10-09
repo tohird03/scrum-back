@@ -107,6 +107,7 @@ export class AuthService {
 
    // POST: Refresh token
    async refreshToken(token: string) {
+    // User modeldan qidiraman
     const refreshToken = await this.RefreshTokenModel.findOne({token})
 
     if(!refreshToken) {
@@ -121,6 +122,7 @@ export class AuthService {
     const accessToken = this.jwtService.sign({userId}, {expiresIn: '1h'})
     const refreshToken = this.jwtService.sign({userId}, {expiresIn: '3d'})
 
+    // User tablega saqlash kerak
     await this.saveStoreRefreshToken(refreshToken, userId);
 
     return {
