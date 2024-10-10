@@ -3,6 +3,7 @@ import {SendEmailForOtp, SignUpDto } from './dtos/auth.dto';
 import { AuthService } from './auth.service';
 import { RefreshTokenDto } from './dtos/refresh-token.dto';
 import { LoginDto } from './dtos/login.dto';
+import { AuthGuard } from 'src/guards/auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -31,6 +32,7 @@ export class AuthController {
 
   // /refresh-token POST
   @Post('refresh-token')
+  @UseGuards(AuthGuard)
   @UsePipes(new ValidationPipe())
   async refreshTokenI(@Body() refreshTokenData: RefreshTokenDto) {
     return this.authService.refreshToken(refreshTokenData?.refreshToken)

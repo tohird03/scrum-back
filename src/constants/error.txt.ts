@@ -3,4 +3,5 @@ export const ErrorTxt = {
   UserNotFound: 'User not found',
   AuthWrongPass: "Wrong password",
   AuthInvalidRefreshToken: "Refresh Token is invalid",
+  InvalidToken: "Invalid Token",
 }

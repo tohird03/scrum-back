@@ -10,7 +10,6 @@ import { randomInt } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { OtpModel } from './schemas/otp.schema';
 import { JwtService } from '@nestjs/jwt';
-import { RefreshTokenModel } from './schemas/refresh-token.schema';
 import { LoginDto } from './dtos/login.dto';
 
 @Injectable()
@@ -18,7 +17,6 @@ export class AuthService {
   constructor(
     @InjectModel(User.name) private UserModel: Model<User>,
     @InjectModel(OtpModel.name) private OtpModel: Model<OtpModel>,
-    @InjectModel(RefreshTokenModel.name) private RefreshTokenModel: Model<RefreshTokenModel>,
     private readonly authConfig: ConfigService,
     private readonly jwtService: JwtService,
   ) {}
@@ -107,14 +105,13 @@ export class AuthService {
 
    // POST: Refresh token
    async refreshToken(token: string) {
-    // User modeldan qidiraman
-    const refreshToken = await this.RefreshTokenModel.findOne({token})
+    const findUser = await this.UserModel.findOne({refreshToken: token})
 
-    if(!refreshToken) {
+    if(!findUser?.refreshToken) {
       throw new UnauthorizedException(ErrorTxt.AuthInvalidRefreshToken)
     }
 
-    return this.generateToken(refreshToken?.userId)
+    return this.generateToken(findUser?._id)
   }
 
   // Generate token, accessToken and refreshToken
@@ -122,24 +119,15 @@ export class AuthService {
     const accessToken = this.jwtService.sign({userId}, {expiresIn: '1h'})
     const refreshToken = this.jwtService.sign({userId}, {expiresIn: '3d'})
 
-    // User tablega saqlash kerak
-    await this.saveStoreRefreshToken(refreshToken, userId);
+    await this.UserModel.updateOne(
+      {_id: userId},
+      {$set: {refreshToken}},
+      {upsert: true}
+    )
 
     return {
       accessToken,
       refreshToken
     }
-  }
-
-  // Refresh token save to db
-  async saveStoreRefreshToken (token: string, userId) {
-    const expiryDate = new Date()
-    expiryDate.setDate(expiryDate.getDate() + 3)
-
-    await this.RefreshTokenModel.updateOne(
-      {userId},
-      {$set: {expiryDate, token}},
-      {upsert: true}
-    )
   }
 }
