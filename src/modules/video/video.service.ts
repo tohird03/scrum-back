@@ -2,28 +2,41 @@ import { Injectable, NotFoundException, InternalServerErrorException } from '@ne
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Video } from './schemas/video.schema';
+import * as fs from 'fs'; // fs modulini qo'shing
+import * as path from 'path'; // path modulini to'g'ri import qiling
 
 @Injectable()
 export class VideoService {
   constructor(@InjectModel(Video.name) private videoModel: Model<Video>) {}
 
-  async uploadVideo(file: { buffer: Buffer; mimetype: string }, title: string, description: string) {
+  async uploadVideo(
+    file: {
+      originalname: string;
+      buffer: Buffer;
+      mimetype: string;
+    },
+    title: string,
+    description: string
+  ) {
     try {
       const video = new this.videoModel({
         title,
         description,
         contentType: file.mimetype,
-        videoBuffer: file.buffer,
       });
 
-      await video.save()
-      return "Success uploaded";
+      await video.save();
+      return "Video successfully uploaded";
     } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw new NotFoundException('Video model not found');
-      } else {
-        throw new InternalServerErrorException('Error occurred while uploading video');
-      }
+      throw new InternalServerErrorException('Error uploading video: ' + error.message);
     }
+  }
+
+  async findVideoById(id: string): Promise<Video> {
+    const video = await this.videoModel.findById(id).exec();
+    if (!video) {
+      throw new NotFoundException('Video not found');
+    }
+    return video;
   }
 }
