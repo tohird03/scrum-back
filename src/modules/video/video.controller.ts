@@ -2,12 +2,11 @@ import { Body, Controller, Get, Param, Post, Res, UploadedFile, UseInterceptors,
 import { VideoService } from './video.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
-import * as fs from 'fs';
-import * as path from 'path';
+import { Readable } from 'stream';
 
 @Controller('video')
 export class VideoController {
-  constructor(private readonly videoService: VideoService) {}
+  constructor(private readonly videoService: VideoService) { }
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
@@ -26,13 +25,23 @@ export class VideoController {
       throw new NotFoundException('Video not found');
     }
 
-    const videoPath = path.resolve('videos', video.url);
-    const videoSize = fs.statSync(videoPath).size;
+    const videoBuffer = video?.videoBuffer;
+    if (!videoBuffer) {
+      throw new NotFoundException('Video buffer not found');
+    }
+
+    const videoSize = videoBuffer.length;
 
     // Range so'rovini qabul qilish
     const CHUNK_SIZE = 10 ** 6; // 1MB
-    const start = Number(range.replace(/\D/g, ''));
-    const end = Math.min(start + CHUNK_SIZE, videoSize - 1);
+    let start = 0;
+    let end = Math.min(CHUNK_SIZE - 1, videoSize - 1);
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      start = parseInt(parts[0], 10);
+      end = parts[1] ? parseInt(parts[1], 10) : Math.min(start + CHUNK_SIZE - 1, videoSize - 1);
+    }
 
     res.writeHead(206, {
       'Content-Range': `bytes ${start}-${end}/${videoSize}`,
@@ -41,7 +50,12 @@ export class VideoController {
       'Content-Type': video.contentType,
     });
 
-    const stream = fs.createReadStream(videoPath, { start, end });
+
+    // Bufferdan oqim yaratish
+    const stream = new Readable();
+    stream.push(videoBuffer.slice(start, end + 1));
+    stream.push(null); // Oqim tugadi
+
     stream.pipe(res);
   }
 }
