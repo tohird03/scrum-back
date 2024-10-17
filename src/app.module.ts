@@ -4,9 +4,9 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { VideoModule } from './modules/video/video.module';
-import { Service } from './modules/courses/.service';
 import { CoursesService } from './modules/courses/courses.service';
 import { CoursesModule } from './modules/courses/courses.module';
+import { BlogModule } from './modules/blog/blog.module';
 
 @Module({
   imports: [
@@ -27,8 +27,9 @@ import { CoursesModule } from './modules/courses/courses.module';
     AuthModule,
     VideoModule,
     CoursesModule,
+    BlogModule,
   ],
   controllers: [],
-  providers: [Service, CoursesService],
+  providers: [],
 })
 export class AppModule { }

@@ -14,9 +14,6 @@ export class Video extends Document {
 
   @Prop({required: true})
   videoBuffer: Buffer;
-
-  @Prop()
-  url: string;
 }
 
 export const VideoSchema = SchemaFactory.createForClass(Video);

@@ -50,7 +50,6 @@ export class VideoController {
       'Content-Type': video.contentType,
     });
 
-
     // Bufferdan oqim yaratish
     const stream = new Readable();
     stream.push(videoBuffer.slice(start, end + 1));
